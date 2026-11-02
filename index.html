@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Expense Tracker Pro</title>
+  <link rel="stylesheet" href="style.css" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+</head>
+<body>
+  <!-- Login screen (shown only when Firebase is configured) -->
+  <div id="auth" hidden>
+    <form id="authForm" class="auth-card">
+      <h2>💰 Expense Tracker Pro</h2>
+      <p class="muted-text">Login ya Sign up karo. Har user ka data alag rahega.</p>
+      <input type="email" id="authEmail" placeholder="Email" required />
+      <input type="password" id="authPass" placeholder="Password (min 6 characters)" minlength="6" required />
+      <div class="row">
+        <button type="submit" id="loginBtn">Login</button>
+        <button type="button" id="signupBtn" class="ghost">Sign up</button>
+      </div>
+      <p id="authError" class="error" hidden></p>
+    </form>
+  </div>
+
+  <div class="container">
+    <header>
+      <h1>💰 Expense Tracker Pro</h1>
+      <div class="header-right">
+        <span id="userLabel" class="muted-text"></span>
+        <button id="logoutBtn" class="ghost" hidden>Logout</button>
+        <button id="themeBtn" class="ghost" aria-label="Toggle dark mode">🌙</button>
+      </div>
+    </header>
+
+    <!-- Total balance: hamesha sab entries ka -->
+    <section class="panel total-panel">
+      <span>💼 Total Balance (ab tak ki sab entries)</span>
+      <h2 id="total">₹0</h2>
+      <small>Kul Income − kul Kharcha. Neeche ke date filter se ispe koi farq nahi padta.</small>
+    </section>
+
+    <!-- Feature 4: Date range filter -->
+    <section class="panel range">
+      <h3>📅 Kis period ka hisaab dekhna hai?</h3>
+      <p class="helper">Ek option chuno ya apni dates daalo. Neeche ke Income/Kharcha cards, charts aur Transactions list isi period ke hisaab se badlenge.</p>
+      <div class="chips" id="presets">
+        <button type="button" class="chip active" data-range="all">Sab (All time)</button>
+        <button type="button" class="chip" data-range="month">Is mahine</button>
+        <button type="button" class="chip" data-range="last">Pichla mahina</button>
+        <button type="button" class="chip" data-range="30">Last 30 din</button>
+      </div>
+      <div class="range-row">
+        <label>Custom: From <input type="date" id="from" /></label>
+        <label>To <input type="date" id="to" /></label>
+        <button type="button" id="clearRange" class="ghost">Reset</button>
+      </div>
+      <p id="rangeLabel" class="range-label"></p>
+    </section>
+
+    <section class="cards">
+      <div class="card income"><span>Income (kamai)</span><h2 id="income">₹0</h2><small class="ptag"></small></div>
+      <div class="card expense"><span>Kharcha (Expense)</span><h2 id="expense">₹0</h2><small class="ptag"></small></div>
+      <div class="card"><span>Bachat (Income − Kharcha)</span><h2 id="balance">₹0</h2><small class="ptag"></small></div>
+    </section>
+
+    <!-- Feature 2: Monthly budget -->
+    <section class="panel">
+      <h3>🎯 Monthly Budget — <span id="budgetMonth"></span></h3>
+      <p class="helper">Is mahine kitna kharch karna hai wo daalo. Sirf is mahine ke kharche ginte hain (upar ke date filter se alag).</p>
+      <div class="budget-row">
+        <input type="number" id="budget" placeholder="Is mahine ka budget (₹), jaise 5000" min="0" />
+        <button id="saveBudget">Save</button>
+      </div>
+      <div id="budgetStatus" class="budget-status" hidden>
+        <div class="bar"><div id="barFill"></div></div>
+        <p id="budgetText"></p>
+      </div>
+    </section>
+
+    <!-- Feature 1: Add / Edit -->
+    <section class="panel">
+      <h3 id="formTitle">Add Transaction</h3>
+      <p class="helper">Kya kharch/kamaya, kitna, Expense ya Income, category aur date bharke Add dabao.</p>
+      <form id="form" class="grid-form">
+        <input type="text" id="desc" placeholder="Description (e.g. Groceries)" required />
+        <input type="number" id="amount" placeholder="Amount" min="0.01" step="0.01" required />
+        <select id="type">
+          <option value="expense">Expense</option>
+          <option value="income">Income</option>
+        </select>
+        <select id="category"></select>
+        <input type="date" id="date" required />
+        <button type="submit" id="submitBtn">Add</button>
+        <button type="button" id="cancelEdit" class="ghost" hidden>Cancel</button>
+      </form>
+    </section>
+
+    <section class="charts">
+      <div class="panel">
+        <h3>Expense by Category</h3>
+        <canvas id="pieChart"></canvas>
+      </div>
+      <div class="panel">
+        <h3>Income vs Expense (Monthly)</h3>
+        <canvas id="barChart"></canvas>
+      </div>
+    </section>
+
+    <section class="panel">
+      <div class="list-head">
+        <h3>Transactions</h3>
+        <div class="filters">
+          <input type="search" id="search" placeholder="Search..." />
+          <select id="filterType">
+            <option value="all">All</option>
+            <option value="income">Income</option>
+            <option value="expense">Expense</option>
+          </select>
+          <button id="exportBtn" class="ghost">⬇ CSV</button>
+        </div>
+      </div>
+      <ul id="list"></ul>
+      <p id="empty" class="muted">No transactions found.</p>
+    </section>
+
+    <!-- Feature 5: Recurring -->
+    <section class="panel">
+      <h3>🔁 Recurring (Rent, Subscription, Salary)</h3>
+      <p class="helper">Ek baar set karo, fir start date se har mahine (ya hafte) entry apne aap ban jayegi. Aakhri date wala box start date hai.</p>
+      <form id="rForm" class="grid-form r-form">
+        <input type="text" id="rDesc" placeholder="Description (e.g. Rent)" required />
+        <input type="number" id="rAmount" placeholder="Amount" min="0.01" step="0.01" required />
+        <select id="rType">
+          <option value="expense">Expense</option>
+          <option value="income">Income</option>
+        </select>
+        <select id="rCategory"></select>
+        <select id="rFreq">
+          <option value="monthly">Monthly</option>
+          <option value="weekly">Weekly</option>
+        </select>
+        <input type="date" id="rStart" required title="Start date" />
+        <button type="submit">Add</button>
+      </form>
+      <ul id="rList"></ul>
+      <p id="rEmpty" class="muted">Koi recurring entry nahi hai.</p>
+    </section>
+  </div>
+
+  <script src="script.js"></script>
+</body>
+</html>
